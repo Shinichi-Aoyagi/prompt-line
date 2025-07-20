@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { app } from 'electron';
 import path from 'path';
 import os from 'os';
+import config from '../config/app-config';
 import type { 
   AppInfo, 
   LogLevel, 
@@ -210,13 +211,9 @@ if (process.env.NODE_ENV !== 'test') {
 
 
 function getCurrentApp(): Promise<AppInfo | null> {
-  const startTime = performance.now();
-  logger.debug('🕐 Starting getCurrentApp()');
-  
   return new Promise((resolve) => {
     // Check platform directly instead of using config to avoid dependency
-    if (process.platform !== 'darwin') {
-      logger.debug(`⏱️  Platform check (non-darwin): ${(performance.now() - startTime).toFixed(2)}ms`);
+    if (!config.platform.isMac) {
       resolve(null);
       return;
     }
@@ -226,25 +223,16 @@ function getCurrentApp(): Promise<AppInfo | null> {
       killSignal: 'SIGTERM' as const
     };
 
-    const execStartTime = performance.now();
     exec(`"${WINDOW_DETECTOR_PATH}" current-app`, options, (error, stdout) => {
-      const execDuration = performance.now() - execStartTime;
-      
       if (error) {
         logger.warn('Error getting current app (non-blocking):', error.message);
-        logger.debug(`⏱️  getCurrentApp exec (error): ${execDuration.toFixed(2)}ms`);
-        logger.debug(`🏁 Total getCurrentApp time (error): ${(performance.now() - startTime).toFixed(2)}ms`);
         resolve(null);
       } else {
         try {
-          const parseStartTime = performance.now();
           const result = JSON.parse(stdout.trim());
-          logger.debug(`⏱️  JSON parsing: ${(performance.now() - parseStartTime).toFixed(2)}ms`);
           
           if (result.error) {
             logger.warn('Native tool returned error:', result.error);
-            logger.debug(`⏱️  getCurrentApp exec (tool error): ${execDuration.toFixed(2)}ms`);
-            logger.debug(`🏁 Total getCurrentApp time (tool error): ${(performance.now() - startTime).toFixed(2)}ms`);
             resolve(null);
             return;
           }
@@ -254,14 +242,9 @@ function getCurrentApp(): Promise<AppInfo | null> {
             bundleId: result.bundleId === null ? null : result.bundleId
           };
           
-          logger.debug(`⏱️  getCurrentApp exec (success): ${execDuration.toFixed(2)}ms`);
-          logger.debug(`🏁 Total getCurrentApp time: ${(performance.now() - startTime).toFixed(2)}ms`);
-          logger.debug('Current app detected:', appInfo);
           resolve(appInfo);
         } catch (parseError) {
           logger.warn('Error parsing app info:', parseError);
-          logger.debug(`⏱️  getCurrentApp exec (parse error): ${execDuration.toFixed(2)}ms`);
-          logger.debug(`🏁 Total getCurrentApp time (parse error): ${(performance.now() - startTime).toFixed(2)}ms`);
           resolve(null);
         }
       }
@@ -271,7 +254,7 @@ function getCurrentApp(): Promise<AppInfo | null> {
 
 function pasteWithNativeTool(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (process.platform !== 'darwin') {
+    if (!config.platform.isMac) {
       reject(new Error('Native paste only supported on macOS'));
       return;
     }
@@ -467,7 +450,7 @@ function checkAccessibilityPermission(): Promise<AccessibilityStatus> {
 
 function getActiveWindowBounds(): Promise<WindowBounds | null> {
   return new Promise((resolve) => {
-    if (process.platform !== 'darwin') {
+    if (!config.platform.isMac) {
       resolve(null);
       return;
     }
@@ -516,7 +499,7 @@ function getActiveWindowBounds(): Promise<WindowBounds | null> {
 
 function activateAndPasteWithNativeTool(appInfo: AppInfo | string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (process.platform !== 'darwin') {
+    if (!config.platform.isMac) {
       reject(new Error('Native paste only supported on macOS'));
       return;
     }

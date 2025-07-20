@@ -5,11 +5,15 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "npm run compile && electron .",
-    "compile": "tsc && npm run build:renderer && cd native && make install && cp -r ../src/native-tools ../dist/",
-    "build:renderer": "vite build && cp src/renderer/input.html dist/renderer/input.html && cp -r src/renderer/styles dist/renderer/",
+    "compile": "node scripts/compile-platform.js",
+    "compile:mac": "cd native && make install && cp -r ../src/native-tools ../dist/",
+    "compile:win": "cd native-win && powershell -ExecutionPolicy Bypass -File build-all.ps1 && cd ..",
+    "build:renderer": "vite build && node scripts/copy-renderer-files.js",
     "typecheck": "tsc --noEmit",
     "build": "npm run compile && electron-builder --mac --publish=never",
-    "clean": "rm -rf dist/mac* dist/*.dmg dist/*.zip dist/*.blockmap",
+    "build:win": "npm run compile && electron-builder --win --publish=never",
+    "build:all": "npm run compile && electron-builder --mac --win --publish=never",
+    "clean": "node scripts/clean.js",
     "release": "semantic-release",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -39,12 +43,12 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.3",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
     "@types/jest": "^29.5.14",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "20.17.57",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "electron": "^36.5.0",
     "electron-builder": "^26.0.16",
     "electron-mock-ipc": "0.3.12",
@@ -55,7 +59,9 @@
     "jest": "^30.0.0",
     "jest-environment-jsdom": "^30.0.0",
     "jest-environment-node": "^30.0.0",
+    "png-to-ico": "^2.1.8",
     "semantic-release": "^24.2.5",
+    "sharp": "^0.34.3",
     "ts-jest": "^29.4.0",
     "typescript": "~5.5.0",
     "vite": "^6.3.5"
@@ -108,8 +114,11 @@
       "package.json",
       "!dist/mac",
       "!dist/mac-arm64",
+      "!dist/win*",
       "!dist/*.dmg",
       "!dist/*.zip",
+      "!dist/*.exe",
+      "!dist/*.msi",
       "!dist/*.blockmap",
       "!dist/builder-*"
     ],
@@ -141,6 +150,41 @@
         }
       ]
     },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/Prompt-Line.ico",
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker",
+      "forceCodeSigning": false,
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Prompt Line",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": "Productivity",
+      "artifactName": "Prompt-Line-${version}-${arch}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "Prompt-Line-${version}-${arch}-Portable.${ext}"
+    },
     "dmg": {
       "contents": [
         {
@@ -158,6 +202,8 @@
     }
   },
   "dependencies": {
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.10",
     "js-yaml": "^4.1.0"
   }
 }

@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import * as yaml from 'js-yaml';
 import { logger } from '../utils/utils';
+import config from '../config/app-config';
 import type { UserSettings } from '../types';
 
 class SettingsManager {
@@ -13,20 +14,24 @@ class SettingsManager {
   constructor() {
     this.settingsFile = path.join(os.homedir(), '.prompt-line', 'settings.yml');
     
+    // Platform-specific default shortcuts
+    const modifier = config.platform.isMac ? 'Cmd' : 'Ctrl';
+    
     this.defaultSettings = {
       shortcuts: {
-        main: 'Cmd+Shift+Space',
-        paste: 'Cmd+Enter',
+        main: `${modifier}+Shift+Space`,
+        paste: `${modifier}+Enter`,
         close: 'Escape',
         historyNext: 'Ctrl+j',
         historyPrev: 'Ctrl+k',
-        search: 'Cmd+f'
+        search: `${modifier}+f`
       },
       window: {
         position: 'active-text-field',
         width: 600,
         height: 300
-      }
+      },
+      ignore_apps: []
     };
 
     this.currentSettings = { ...this.defaultSettings };
@@ -83,7 +88,8 @@ class SettingsManager {
       window: {
         ...this.defaultSettings.window,
         ...userSettings.window
-      }
+      },
+      ignore_apps: userSettings.ignore_apps || this.defaultSettings.ignore_apps || []
     };
   }
 
@@ -147,6 +153,12 @@ window:
   # Window height in pixels
   # Recommended range: 200-400 pixels
   height: ${settings.window.height}
+
+# Application filtering configuration  
+# List of application names to ignore when the main shortcut is pressed
+# This is useful for multi-platform environments (e.g., Parallels, VMware)
+# Format: List of app names (case-sensitive)
+ignore_apps:${settings.ignore_apps?.length ? settings.ignore_apps.map(app => `\n  - ${app}`).join('') : ' []'}
 `;
   }
 
@@ -206,11 +218,21 @@ window:
     });
   }
 
+  getIgnoreApps(): string[] {
+    return this.currentSettings.ignore_apps ? [...this.currentSettings.ignore_apps] : [];
+  }
+
+  async updateIgnoreApps(ignore_apps: string[]): Promise<void> {
+    await this.updateSettings({
+      ignore_apps: [...ignore_apps]
+    });
+  }
 
   getDefaultSettings(): UserSettings {
     return {
       shortcuts: { ...this.defaultSettings.shortcuts },
-      window: { ...this.defaultSettings.window }
+      window: { ...this.defaultSettings.window },
+      ignore_apps: this.defaultSettings.ignore_apps ? [...this.defaultSettings.ignore_apps] : []
     };
   }
 
