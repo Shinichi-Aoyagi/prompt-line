@@ -31,6 +31,8 @@ When reporting a bug, please include the following information:
 * **Screenshots**: If applicable. Videos are also acceptable.
 
 ## 3. Pull Requests are not currently accepted
+> **Note**: The following is the original author (@nkmr-jp)'s policy from the fork source. As the maintainer of this fork (@Shinichi-Aoyagi), I am willing to accept good pull requests. However, I share the same concerns as @nkmr-jp regarding security issues and the AI slop problem, so I cannot guarantee that all pull requests will be accepted.
+
 Prompt Line is not currently accepting Pull Requests from third parties for the following reasons:
 * **Review and testing overhead**
   * As a personal project, I want to avoid spending time on PR reviews and testing
